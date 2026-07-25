@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: url-shortener
+  
+  # Habilitar Virtual Threads (Java 21)
+  threads:
+    virtual:
+      enabled: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  cassandra:
+    contact-points: ${CASSANDRA_HOST:localhost}
+    port: ${CASSANDRA_PORT:9042}
+    keyspace-name: ${CASSANDRA_KEYSPACE:url_shortener_ks}
+    local-datacenter: ${CASSANDRA_DATACENTER:datacenter1}
+    # Mantido estático, pois em produção usaria uma ferramenta de migração (como Flyway ou Liquibase)
+    schema-action: create-if-not-exists
+
