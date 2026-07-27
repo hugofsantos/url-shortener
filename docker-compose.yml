@@ -1,0 +1,51 @@
+services:
+  redis:
+    image: redis:7.2-alpine
+    container_name: url-shortener-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  cassandra:
+    image: cassandra:4.1
+    container_name: url-shortener-cassandra
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=UrlShortenerCluster
+    healthcheck:
+      # O Cassandra demora um pouco para subir. Esse teste garante que ele já aceita conexões.
+      test: ["CMD", "cqlsh", "-u", "cassandra", "-p", "cassandra", "-e", "describe keyspaces"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # Contêiner auxiliar responsável apenas por criar o Keyspace
+  cassandra-init:
+    image: cassandra:4.1
+    container_name: url-shortener-cassandra-init
+    depends_on:
+      cassandra:
+        condition: service_healthy # Só roda quando o Cassandra estiver 100% pronto
+    command:
+          - "cqlsh"
+          - "cassandra"
+          - "-e"
+          - "CREATE KEYSPACE IF NOT EXISTS url_shortener_ks WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};"
+
+  api:
+      build: .
+      container_name: url-shortener-api
+      ports:
+        - "${HOST_API_PORT:-8080}:8080"
+      env_file: 
+        - .env
+      depends_on:
+        redis:
+          condition: service_healthy
+        cassandra-init:
+          condition: service_completed_successfully
